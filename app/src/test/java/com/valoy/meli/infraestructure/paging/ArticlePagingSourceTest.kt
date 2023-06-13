@@ -8,6 +8,7 @@ import com.valoy.meli.infraestructure.client.ArticleClient
 import com.valoy.meli.infraestructure.dto.Paging
 import com.valoy.meli.infraestructure.dto.Result
 import com.valoy.meli.infraestructure.dto.SearchResponse
+import com.valoy.meli.utils.CoroutineMainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -26,21 +28,18 @@ class ArticlePagingSourceTest {
 
     private val articleClient = mockk<ArticleClient>()
     private lateinit var pagingSource: ArticlePagingSource
-    private val testDispatcher = StandardTestDispatcher()
+
+    @get:Rule
+    val coroutineRule = CoroutineMainDispatcherRule(StandardTestDispatcher())
+
 
     @Before
     fun setUp() {
         pagingSource = ArticlePagingSource(QUERY, articleClient)
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
     }
 
     @Test
-    fun `return error on load failure`() =  runTest(testDispatcher) {
+    fun `return error on load failure`() =  runTest(coroutineRule.dispatcher) {
         val error = RuntimeException("404", Throwable())
         coEvery { articleClient.getArticles(any(), any(), any(), any()) } throws error
         val expectedResult = PagingSource.LoadResult.Error<Int, Article>(error)
@@ -56,7 +55,7 @@ class ArticlePagingSourceTest {
     }
 
     @Test
-    fun `return first page with one item per page with one item total`() =  runTest(testDispatcher) {
+    fun `return first page with one item per page with one item total`() =  runTest(coroutineRule.dispatcher) {
 
         givenGetArticlesResponse(1L, 0)
 
@@ -72,7 +71,7 @@ class ArticlePagingSourceTest {
     }
 
     @Test
-    fun `return first page with one item per page with two items total`() =  runTest(testDispatcher) {
+    fun `return first page with one item per page with two items total`() =  runTest(coroutineRule.dispatcher) {
 
         givenGetArticlesResponse(2L, 0)
 
@@ -89,7 +88,7 @@ class ArticlePagingSourceTest {
     }
 
     @Test
-    fun `append second page with one item per page with three items total`() =  runTest(testDispatcher) {
+    fun `append second page with one item per page with three items total`() =  runTest(coroutineRule.dispatcher) {
 
         givenGetArticlesResponse(3L, 1)
 
@@ -112,7 +111,7 @@ class ArticlePagingSourceTest {
     }
 
     @Test
-    fun `prepend first page with one item per page with three items total`() =  runTest(testDispatcher) {
+    fun `prepend first page with one item per page with three items total`() =  runTest(coroutineRule.dispatcher) {
 
         givenGetArticlesResponse(3L, 1)
 
@@ -136,7 +135,7 @@ class ArticlePagingSourceTest {
 
 
     @Test
-    fun `refresh key on null anchor`() =  runTest(testDispatcher) {
+    fun `refresh key on null anchor`() =  runTest(coroutineRule.dispatcher) {
 
         val pagingState = PagingState<Int, Article>(
             emptyList(),

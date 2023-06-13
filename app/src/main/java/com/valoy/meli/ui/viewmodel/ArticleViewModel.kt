@@ -8,6 +8,8 @@ import androidx.paging.cachedIn
 import androidx.paging.map
 import com.valoy.meli.domain.repository.ArticleRepository
 import com.valoy.meli.ui.dto.ArticleDto
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emitAll
@@ -16,7 +18,8 @@ import kotlinx.coroutines.launch
 
 class ArticleViewModel(
     private val savedStateHandle: SavedStateHandle,
-    private val repository: ArticleRepository
+    private val repository: ArticleRepository,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
 
@@ -30,7 +33,7 @@ class ArticleViewModel(
 
     fun onSearch(query: String) {
         savedStateHandle["query"] = query
-        viewModelScope.launch {
+        viewModelScope.launch(dispatcher) {
             _articlesPaging.emitAll(
                 repository.getArticles(query)
                     .map { pagingData ->

@@ -10,6 +10,7 @@ import com.valoy.meli.infraestructure.dto.SearchResponse
 import com.valoy.meli.ui.adapter.ArticleAdapter
 import com.valoy.meli.ui.dto.ArticleDto
 import com.valoy.meli.ui.ArticleViewModelTest
+import com.valoy.meli.utils.CoroutineMainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
@@ -26,28 +27,25 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ArticleRemoteRepositoryTest {
 
-    private val testDispatcher = StandardTestDispatcher()
     private val articleClient = mockk<ArticleClient>()
     private lateinit var articleRemoteRepository: ArticleRemoteRepository
 
+    @get:Rule
+    val coroutineRule = CoroutineMainDispatcherRule(StandardTestDispatcher())
+
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
         articleRemoteRepository = ArticleRemoteRepository(articleClient)
     }
 
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
-
     @Test
-    fun `return article paging data`() = runTest(testDispatcher) {
+    fun `return article paging data`() = runTest(coroutineRule.dispatcher) {
         givenGetArticlesResponse()
 
         val differ = givenAsyncPagingDataDiffer()
@@ -70,7 +68,7 @@ class ArticleRemoteRepositoryTest {
     }
 
     @Test
-    fun `return empty article paging data on error`() = runTest(testDispatcher) {
+    fun `return empty article paging data on error`() = runTest(coroutineRule.dispatcher) {
         givenGetArticlesError()
 
         val differ = givenAsyncPagingDataDiffer()
@@ -95,8 +93,8 @@ class ArticleRemoteRepositoryTest {
         return AsyncPagingDataDiffer(
             diffCallback = ArticleAdapter.ARTICLE_DIFF_CALLBACK,
             updateCallback = ArticleViewModelTest.noopListUpdateCallback,
-            mainDispatcher = testDispatcher,
-            workerDispatcher = testDispatcher,
+            mainDispatcher = coroutineRule.dispatcher,
+            workerDispatcher = coroutineRule.dispatcher,
         )
     }
 

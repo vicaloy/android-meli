@@ -8,6 +8,7 @@ import com.valoy.meli.domain.repository.ArticleRepository
 import com.valoy.meli.ui.adapter.ArticleAdapter.Companion.ARTICLE_DIFF_CALLBACK
 import com.valoy.meli.ui.dto.ArticleDto
 import com.valoy.meli.ui.viewmodel.ArticleViewModel
+import com.valoy.meli.utils.CoroutineMainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -17,35 +18,33 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ArticleViewModelTest {
 
-    private val testDispatcher = StandardTestDispatcher()
     private val articleRepository = mockk<ArticleRepository>(relaxed = true)
     private val savedStateHandle = mockk<androidx.lifecycle.SavedStateHandle>(relaxed = true)
     private lateinit var viewModel: ArticleViewModel
 
+    @get:Rule
+    val coroutineRule = CoroutineMainDispatcherRule(StandardTestDispatcher())
+
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-        viewModel = ArticleViewModel(savedStateHandle, articleRepository)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
+        viewModel = ArticleViewModel(savedStateHandle, articleRepository, coroutineRule.dispatcher)
     }
 
     @Test
-    fun `return articles pages on search`() =  runTest(testDispatcher) {
+    fun `return articles pages on search`() = runTest(coroutineRule.dispatcher) {
         givenArticles()
 
         val differ = givenAsyncPagingDataDiffer()
@@ -93,8 +92,8 @@ class ArticleViewModelTest {
         return AsyncPagingDataDiffer(
             diffCallback = ARTICLE_DIFF_CALLBACK,
             updateCallback = noopListUpdateCallback,
-            mainDispatcher = testDispatcher,
-            workerDispatcher = testDispatcher,
+            mainDispatcher = coroutineRule.dispatcher,
+            workerDispatcher = coroutineRule.dispatcher,
         )
     }
 
