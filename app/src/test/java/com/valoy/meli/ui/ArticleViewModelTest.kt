@@ -10,6 +10,7 @@ import com.valoy.meli.ui.dto.ArticleDto
 import com.valoy.meli.ui.viewmodel.ArticleViewModel
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +29,7 @@ import org.junit.Test
 class ArticleViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val articleRepository = mockk<ArticleRepository>()
+    private val articleRepository = mockk<ArticleRepository>(relaxed = true)
     private val savedStateHandle = mockk<androidx.lifecycle.SavedStateHandle>(relaxed = true)
     private lateinit var viewModel: ArticleViewModel
 
@@ -44,22 +45,12 @@ class ArticleViewModelTest {
     }
 
     @Test
-    fun `return articles pages on search`() = runTest {
-        val pagingData = PagingData.from(
-            listOf(
-                ARTICLE
-            )
-        )
-        every { articleRepository.getArticles(QUERY) } returns MutableStateFlow(pagingData)
+    fun `return articles pages on search`() =  runTest(testDispatcher) {
+        givenArticles()
 
-        val differ = AsyncPagingDataDiffer(
-            diffCallback = ARTICLE_DIFF_CALLBACK,
-            updateCallback = noopListUpdateCallback,
-            mainDispatcher = testDispatcher,
-            workerDispatcher = testDispatcher,
-        )
+        val differ = givenAsyncPagingDataDiffer()
 
-        viewModel.onSearch(QUERY)
+        whenSearchQuery()
 
         val job = launch {
             viewModel.articlesPaging.collectLatest { pagingData ->
@@ -75,8 +66,48 @@ class ArticleViewModelTest {
         job.cancel()
     }
 
+    @Test
+    fun `save query on search`() {
+        whenSearchQuery()
+
+        verify { savedStateHandle[QUERY] = QUERY }
+    }
+
+    @Test
+    fun `save article on click`() {
+        whenArticleClick()
+
+        verify { savedStateHandle[ARTICLE_KEY] = ARTICLE_DTO }
+    }
+
+    private fun givenArticles() {
+        val pagingData = PagingData.from(
+            listOf(
+                ARTICLE
+            )
+        )
+        every { articleRepository.getArticles(QUERY) } returns MutableStateFlow(pagingData)
+    }
+
+    private fun givenAsyncPagingDataDiffer(): AsyncPagingDataDiffer<ArticleDto> {
+        return AsyncPagingDataDiffer(
+            diffCallback = ARTICLE_DIFF_CALLBACK,
+            updateCallback = noopListUpdateCallback,
+            mainDispatcher = testDispatcher,
+            workerDispatcher = testDispatcher,
+        )
+    }
+
+    private fun whenSearchQuery() {
+        viewModel.onSearch(QUERY)
+    }
+
+    private fun whenArticleClick() {
+        viewModel.onArticleClick(ARTICLE_DTO)
+    }
 
     companion object {
+        private const val ARTICLE_KEY = "article"
         private val ARTICLE = Article(
             "id",
             "title",

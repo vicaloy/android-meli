@@ -1,6 +1,7 @@
 package com.valoy.meli.infraestructure.repository
 
 import androidx.paging.AsyncPagingDataDiffer
+import androidx.paging.PagingData
 import androidx.paging.map
 import com.valoy.meli.infraestructure.client.ArticleClient
 import com.valoy.meli.infraestructure.dto.Paging
@@ -14,6 +15,7 @@ import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -45,29 +47,12 @@ class ArticleRemoteRepositoryTest {
     }
 
     @Test
-    fun `return article paging data`() = runTest {
-        coEvery { articleClient.getArticles(any(), any(), any(), any()) } returns SearchResponse(
-            results = listOf(RESULT),
-            paging = Paging(
-                total = 1,
-                offset = 0,
-                limit = ITEM_PER_PAGE
-            )
-        )
+    fun `return article paging data`() = runTest(testDispatcher) {
+        givenGetArticlesResponse()
 
-        val differ = AsyncPagingDataDiffer(
-            diffCallback = ArticleAdapter.ARTICLE_DIFF_CALLBACK,
-            updateCallback = ArticleViewModelTest.noopListUpdateCallback,
-            mainDispatcher = testDispatcher,
-            workerDispatcher = testDispatcher,
-        )
+        val differ = givenAsyncPagingDataDiffer()
 
-        val articlesPaging = articleRemoteRepository.getArticles(QUERY)
-            .map { pagingData ->
-                pagingData.map { article ->
-                    ArticleDto.fromArticle(article)
-                }
-            }
+        val articlesPaging = whenGetArticlesFromRepo()
 
         val job = launch {
             articlesPaging.collectLatest { pagingData ->
@@ -85,22 +70,12 @@ class ArticleRemoteRepositoryTest {
     }
 
     @Test
-    fun `return empty article paging data on error`() = runTest {
-        coEvery { articleClient.getArticles(any(), any(), any(), any()) } throws Exception()
+    fun `return empty article paging data on error`() = runTest(testDispatcher) {
+        givenGetArticlesError()
 
-        val differ = AsyncPagingDataDiffer(
-            diffCallback = ArticleAdapter.ARTICLE_DIFF_CALLBACK,
-            updateCallback = ArticleViewModelTest.noopListUpdateCallback,
-            mainDispatcher = testDispatcher,
-            workerDispatcher = testDispatcher,
-        )
+        val differ = givenAsyncPagingDataDiffer()
 
-        val articlesPaging = articleRemoteRepository.getArticles(QUERY)
-            .map { pagingData ->
-                pagingData.map { article ->
-                    ArticleDto.fromArticle(article)
-                }
-            }
+        val articlesPaging = whenGetArticlesFromRepo()
 
         val job = launch {
             articlesPaging.collectLatest { pagingData ->
@@ -116,6 +91,39 @@ class ArticleRemoteRepositoryTest {
 
     }
 
+    private fun givenAsyncPagingDataDiffer(): AsyncPagingDataDiffer<ArticleDto> {
+        return AsyncPagingDataDiffer(
+            diffCallback = ArticleAdapter.ARTICLE_DIFF_CALLBACK,
+            updateCallback = ArticleViewModelTest.noopListUpdateCallback,
+            mainDispatcher = testDispatcher,
+            workerDispatcher = testDispatcher,
+        )
+    }
+
+    private fun givenGetArticlesError() {
+        coEvery { articleClient.getArticles(any(), any(), any(), any()) } throws Exception()
+    }
+
+    private fun givenGetArticlesResponse() {
+        coEvery { articleClient.getArticles(any(), any(), any(), any()) } returns SearchResponse(
+            results = listOf(RESULT),
+            paging = Paging(
+                total = 1,
+                offset = 0,
+                limit = ITEM_PER_PAGE
+            )
+        )
+    }
+
+    private fun whenGetArticlesFromRepo(): Flow<PagingData<ArticleDto>> {
+        val articlesPaging = articleRemoteRepository.getArticles(QUERY)
+            .map { pagingData ->
+                pagingData.map { article ->
+                    ArticleDto.fromArticle(article)
+                }
+            }
+        return articlesPaging
+    }
 
     companion object {
         private const val ITEM_PER_PAGE = 1

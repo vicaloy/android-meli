@@ -10,8 +10,13 @@ import com.valoy.meli.infraestructure.dto.Result
 import com.valoy.meli.infraestructure.dto.SearchResponse
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -21,14 +26,21 @@ class ArticlePagingSourceTest {
 
     private val articleClient = mockk<ArticleClient>()
     private lateinit var pagingSource: ArticlePagingSource
+    private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setUp() {
         pagingSource = ArticlePagingSource(QUERY, articleClient)
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
-    fun `return error on load failure`() = runTest {
+    fun `return error on load failure`() =  runTest(testDispatcher) {
         val error = RuntimeException("404", Throwable())
         coEvery { articleClient.getArticles(any(), any(), any(), any()) } throws error
         val expectedResult = PagingSource.LoadResult.Error<Int, Article>(error)
@@ -44,53 +56,27 @@ class ArticlePagingSourceTest {
     }
 
     @Test
-    fun `return first page with one item per page with one item total`() = runTest {
+    fun `return first page with one item per page with one item total`() =  runTest(testDispatcher) {
 
-        coEvery { articleClient.getArticles(any(), any(), any(), any()) } returns SearchResponse(
-            results = listOf(RESULT),
-            paging = Paging(
-                total = 1,
-                offset = 0,
-                limit = ITEM_PER_PAGE,
-            )
-        )
+        givenGetArticlesResponse(1L, 0)
 
-        val actual = pagingSource.load(
-            PagingSource.LoadParams.Refresh(
-                key = PAGE_ZERO,
-                loadSize = 45,
-                placeholdersEnabled = false
-            )
-        )
+        val actual = whenPagingLoadRefresh(PAGE_ZERO, 45)
 
-        val expected = PagingSource.LoadResult.Page(
+        val expected = PagingSource.LoadResult.Page<Int, Article>(
             data = listOf(ARTICLE),
             prevKey = null,
             nextKey = null
         )
 
-        assertEquals(expected, actual)
+        thenAssertEquals(expected, actual as PagingSource.LoadResult.Page<Int, Article>)
     }
 
     @Test
-    fun `return first page with one item per page with two items total`() = runTest {
+    fun `return first page with one item per page with two items total`() =  runTest(testDispatcher) {
 
-        coEvery { articleClient.getArticles(any(), any(), any(), any()) } returns SearchResponse(
-            results = listOf(RESULT),
-            paging = Paging(
-                total = 2,
-                offset = 0,
-                limit = ITEM_PER_PAGE,
-            )
-        )
+        givenGetArticlesResponse(2L, 0)
 
-        val actual = pagingSource.load(
-            PagingSource.LoadParams.Refresh(
-                key = PAGE_ZERO,
-                loadSize = 45,
-                placeholdersEnabled = false
-            )
-        )
+        val actual = whenPagingLoadRefresh(PAGE_ZERO, 45)
 
         val expected = PagingSource.LoadResult.Page(
             data = listOf(ARTICLE),
@@ -98,20 +84,14 @@ class ArticlePagingSourceTest {
             nextKey = PAGE_ONE
         )
 
-        assertEquals(expected, actual)
+        thenAssertEquals(expected, actual as PagingSource.LoadResult.Page<Int, Article>)
+
     }
 
     @Test
-    fun `append second page with one item per page with three items total`() = runTest {
+    fun `append second page with one item per page with three items total`() =  runTest(testDispatcher) {
 
-        coEvery { articleClient.getArticles(any(), any(), any(), any()) } returns SearchResponse(
-            results = listOf(RESULT),
-            paging = Paging(
-                total = 3,
-                offset = 1,
-                limit = ITEM_PER_PAGE
-            )
-        )
+        givenGetArticlesResponse(3L, 1)
 
         val actual = pagingSource.load(
             PagingSource.LoadParams.Append(
@@ -127,20 +107,14 @@ class ArticlePagingSourceTest {
             nextKey = PAGE_TWO
         )
 
-        assertEquals(expected, actual)
+        thenAssertEquals(expected, actual as PagingSource.LoadResult.Page<Int, Article>)
+
     }
 
     @Test
-    fun `prepend first page with one item per page with three items total`() = runTest {
+    fun `prepend first page with one item per page with three items total`() =  runTest(testDispatcher) {
 
-        coEvery { articleClient.getArticles(any(), any(), any(), any()) } returns SearchResponse(
-            results = listOf(RESULT),
-            paging = Paging(
-                total = 3,
-                offset = 1,
-                limit = ITEM_PER_PAGE
-            )
-        )
+        givenGetArticlesResponse(3L, 1)
 
         val actual = pagingSource.load(
             PagingSource.LoadParams.Prepend(
@@ -156,12 +130,13 @@ class ArticlePagingSourceTest {
             nextKey = PAGE_TWO
         )
 
-        assertEquals(expected, actual)
+        thenAssertEquals(expected, actual as PagingSource.LoadResult.Page<Int, Article>)
+
     }
 
 
     @Test
-    fun `refresh key on null anchor`() = runTest {
+    fun `refresh key on null anchor`() =  runTest(testDispatcher) {
 
         val pagingState = PagingState<Int, Article>(
             emptyList(),
@@ -175,6 +150,31 @@ class ArticlePagingSourceTest {
         assertEquals(null, actual)
     }
 
+    private fun givenGetArticlesResponse(total: Long, offset: Int) {
+        coEvery { articleClient.getArticles(any(), any(), any(), any()) } returns SearchResponse(
+            results = listOf(RESULT),
+            paging = Paging(
+                total = total,
+                offset = offset,
+                limit = ITEM_PER_PAGE,
+            )
+        )
+    }
+
+    private suspend fun whenPagingLoadRefresh(key: Int, loadSize: Int) = pagingSource.load(
+        PagingSource.LoadParams.Refresh(
+            key = key,
+            loadSize = loadSize,
+            placeholdersEnabled = false
+        )
+    )
+
+    private fun thenAssertEquals(
+        expected: PagingSource.LoadResult.Page<Int, Article>,
+        actual: PagingSource.LoadResult.Page<Int, Article>
+    ) {
+        assertEquals(expected, actual)
+    }
 
     companion object {
         private const val ITEM_PER_PAGE = 1
