@@ -45,8 +45,8 @@ class ArticleDetailFragment : Fragment() {
     }
 
     private fun onLoadArticle() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.articleClicked.collectLatest { article ->
                     with(binding) {
                         title.text = article.title

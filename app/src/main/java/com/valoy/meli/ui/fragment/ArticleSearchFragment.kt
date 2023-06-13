@@ -64,8 +64,8 @@ class ArticleSearchFragment : Fragment() {
     }
 
     private fun onLoadSearchedData() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.articlesPaging.collectLatest { articlePaging ->
                     (binding.list.adapter as ArticleAdapter).submitData(articlePaging)
                 }
@@ -74,8 +74,8 @@ class ArticleSearchFragment : Fragment() {
     }
 
     private fun onRememberSearchedQuery() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.searchQuery.collectLatest {
                     binding.searchTextField.editText?.setText(it)
                 }
@@ -120,8 +120,8 @@ class ArticleSearchFragment : Fragment() {
     }
 
     private fun showProgress() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 (binding.list.adapter as ArticleAdapter).loadStateFlow.collect {
                     binding.appendProgress.isVisible = it.source.append is LoadState.Loading
                     binding.prependProgress.isVisible = it.source.prepend is LoadState.Loading
