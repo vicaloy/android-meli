@@ -76,8 +76,12 @@ class ArticleSearchFragment : Fragment() {
     private fun onRememberSearchedQuery() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.searchQuery.collectLatest {
-                    binding.searchTextField.editText?.setText(it)
+                viewModel.searchQuery.collectLatest {query ->
+
+                    binding.searchTextField.editText?.apply {
+                        setText(query)
+                        setSelection(query.length)
+                    }
                 }
             }
         }
@@ -103,19 +107,21 @@ class ArticleSearchFragment : Fragment() {
 
     private fun showNoResultsWarning(loadState: CombinedLoadStates, adapter: ArticleAdapter) {
         if (isListEndReached(loadState) && isAdapterEmpty(adapter)) {
-            binding.noResult.text = "No results found"
-            binding.noResult.visibility = View.VISIBLE
-        } else {
-            binding.noResult.visibility = View.GONE
+            binding.warning.text = "No results found"
+            binding.warning.visibility = View.VISIBLE
         }
     }
 
     private fun showErrorWarning(loadState: CombinedLoadStates, adapter: ArticleAdapter) {
         if (isErrorOnLoad(loadState) && isAdapterEmpty(adapter)) {
-            binding.noResult.text = "Wops, try again"
-            binding.noResult.visibility = View.VISIBLE
-        } else {
-            binding.noResult.visibility = View.GONE
+            binding.warning.text = "Wops, try again"
+            binding.warning.visibility = View.VISIBLE
+        }
+    }
+
+    private fun hideWarning(adapter: ArticleAdapter) {
+        if (!isAdapterEmpty(adapter)) {
+            binding.warning.visibility = View.GONE
         }
     }
 
@@ -137,6 +143,7 @@ class ArticleSearchFragment : Fragment() {
                 navigateToDetailArticle()
             })
         adapter.addLoadStateListener { loadState ->
+            hideWarning(adapter)
             showNoResultsWarning(loadState, adapter)
             showErrorWarning(loadState, adapter)
         }
