@@ -1,4 +1,4 @@
-package com.valoy.meli.ui.fragment
+package com.valoy.meli.ui.search
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.valoy.meli.Injection
 import com.valoy.meli.databinding.FragmentArticleSearchBinding
 import com.valoy.meli.ui.adapter.ArticleAdapter
-import com.valoy.meli.ui.viewmodel.ArticleViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -28,8 +27,8 @@ class ArticleSearchFragment : Fragment() {
     private var _binding: FragmentArticleSearchBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel by activityViewModels<ArticleViewModel>(
-        factoryProducer = { Injection.provideViewModelFactory(owner = this) }
+    private val viewModel by viewModels<ArticleSearchViewModel>(
+        factoryProducer = { Injection.provideArticleSearchViewModelFactory(owner = this) }
     )
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -39,7 +38,6 @@ class ArticleSearchFragment : Fragment() {
         showProgress()
         onLoadSearchedData()
         onSearch()
-        onRememberSearchedQuery()
     }
 
 
@@ -57,30 +55,42 @@ class ArticleSearchFragment : Fragment() {
         _binding = null
     }
 
-    private fun navigateToDetailArticle() {
-        findNavController().navigate(
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        viewModel.onSaveState(binding.searchTextField.editText?.text.toString())
+    }
+
+    private fun navigateToDetailArticle(articleId: String) {
+        val directions =
             ArticleSearchFragmentDirections.actionSearchArticleFragmentToDetailArticleFragment()
-        )
+                .setArticleId(articleId)
+        findNavController().navigate(directions)
     }
 
     private fun onLoadSearchedData() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.articlesPaging.collectLatest { articlePaging ->
-                    (binding.list.adapter as ArticleAdapter).submitData(articlePaging)
-                }
-            }
-        }
-    }
+                viewModel.uiState.collectLatest { uiState ->
+                    when (uiState) {
+                        is ArticleSearchViewModel.UiState.Loading -> {
+                            showProgress()
+                        }
 
-    private fun onRememberSearchedQuery() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.searchQuery.collectLatest {query ->
+                        is ArticleSearchViewModel.UiState.Success -> {
+                            showProgress()
+                            uiState.articles.collectLatest { articles ->
+                                (binding.list.adapter as ArticleAdapter).submitData(articles)
+                            }
+                        }
 
-                    binding.searchTextField.editText?.apply {
-                        setText(query)
-                        setSelection(query.length)
+                        is ArticleSearchViewModel.UiState.State -> {
+                            binding.searchTextField.editText?.apply {
+                                setText(uiState.query)
+                                setSelection(uiState.query.length)
+                            }
+                        }
+
+                        else -> {}
                     }
                 }
             }
@@ -129,8 +139,8 @@ class ArticleSearchFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 (binding.list.adapter as ArticleAdapter).loadStateFlow.collect {
-                    binding.appendProgress.isVisible = it.source.append is LoadState.Loading
-                    binding.prependProgress.isVisible = it.source.prepend is LoadState.Loading
+                    binding.progress.isVisible = it.source.append is LoadState.Loading
+                    binding.progress.isVisible = it.source.prepend is LoadState.Loading
                 }
             }
         }
@@ -139,8 +149,7 @@ class ArticleSearchFragment : Fragment() {
     private fun bindRecyclerAdapter() {
         val adapter = ArticleAdapter(
             onClickListener = { article ->
-                viewModel.onArticleClick(article)
-                navigateToDetailArticle()
+                navigateToDetailArticle(article.id ?: "")
             })
         adapter.addLoadStateListener { loadState ->
             hideWarning(adapter)
@@ -160,5 +169,4 @@ class ArticleSearchFragment : Fragment() {
             list.addItemDecoration(decoration)
         }
     }
-
 }

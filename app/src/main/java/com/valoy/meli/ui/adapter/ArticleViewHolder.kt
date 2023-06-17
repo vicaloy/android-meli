@@ -15,7 +15,7 @@ class ArticleViewHolder(
             root.setOnClickListener { onClickListener(article) }
             title.text = article.title
             Glide.with(thumbnail.context)
-                .load(article.thumbnail?.replace("http://", "https://"))
+                .load(article.thumbnail?.get(0)?.replace("http://", "https://"))
                 .into(thumbnail)
         }
     }

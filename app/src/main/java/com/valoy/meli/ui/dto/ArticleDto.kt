@@ -8,13 +8,13 @@ import kotlinx.android.parcel.Parcelize
 data class ArticleDto(
     val id: String? = null,
     val title: String? = null,
-    val thumbnail: String? = null
+    val thumbnail: List<String>? = null
 ) : Parcelable {
     companion object {
         fun fromArticle(article: Article) = ArticleDto(
             id = article.id,
             title = article.title,
-            thumbnail = article.thumbnail
+            thumbnail = article.thumbnails
         )
     }
 }

@@ -7,18 +7,24 @@
 
     <fragment
         android:id="@+id/searchArticleFragment"
-        android:name="com.valoy.meli.ui.fragment.ArticleSearchFragment"
+        android:name="com.valoy.meli.ui.search.ArticleSearchFragment"
         android:label="Search"
         tools:layout="@layout/fragment_article_search" >
         <action
             android:id="@+id/action_searchArticleFragment_to_detailArticleFragment"
             app:destination="@id/detailArticleFragment" />
+
     </fragment>
 
     <fragment
         android:id="@+id/detailArticleFragment"
-        android:name="com.valoy.meli.ui.fragment.ArticleDetailFragment"
+        android:name="com.valoy.meli.ui.detail.ArticleDetailFragment"
         android:label="Detail"
-        tools:layout="@layout/fragment_article_detail" />
+        tools:layout="@layout/fragment_article_detail" >
+        <argument
+            android:name="articleId"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
 
 </navigation>

@@ -5,7 +5,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import com.valoy.meli.infraestructure.client.ArticleClient
 import com.valoy.meli.infraestructure.repository.ArticleRemoteRepository
 import com.valoy.meli.domain.repository.ArticleRepository
-import com.valoy.meli.ui.viewmodel.ViewModelFactory
+import com.valoy.meli.ui.detail.ArticleDetailViewModelFactory
+import com.valoy.meli.ui.search.ArticleSearchViewModelFactory
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -17,13 +18,17 @@ object Injection {
         provideProductClient(providerOkHttpClient())
     )
 
-    fun provideViewModelFactory(owner: SavedStateRegistryOwner): ViewModelProvider.Factory {
-        return ViewModelFactory(owner,  provideArticleRepository())
+    fun provideArticleSearchViewModelFactory(owner: SavedStateRegistryOwner): ViewModelProvider.Factory {
+        return ArticleSearchViewModelFactory(owner,  provideArticleRepository())
+    }
+
+    fun provideArticleDetailViewModelFactory(owner: SavedStateRegistryOwner): ViewModelProvider.Factory {
+        return ArticleDetailViewModelFactory(owner,  provideArticleRepository())
     }
 
     private fun providerOkHttpClient(): OkHttpClient {
         val interceptor = HttpLoggingInterceptor()
-        interceptor.level = HttpLoggingInterceptor.Level.BASIC
+        interceptor.level = HttpLoggingInterceptor.Level.BODY
         return OkHttpClient.Builder()
             .addInterceptor(interceptor)
             .build()

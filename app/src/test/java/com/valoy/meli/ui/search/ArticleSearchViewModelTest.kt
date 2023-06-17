@@ -1,46 +1,40 @@
-package com.valoy.meli.ui
+package com.valoy.meli.ui.search
 
 import androidx.paging.AsyncPagingDataDiffer
-import androidx.paging.PagingData
 import androidx.recyclerview.widget.ListUpdateCallback
+import com.google.common.truth.Truth.assertThat
 import com.valoy.meli.domain.model.Article
 import com.valoy.meli.domain.repository.ArticleRepository
 import com.valoy.meli.ui.adapter.ArticleAdapter.Companion.ARTICLE_DIFF_CALLBACK
 import com.valoy.meli.ui.dto.ArticleDto
-import com.valoy.meli.ui.viewmodel.ArticleViewModel
 import com.valoy.meli.utils.CoroutineMainDispatcherRule
-import io.mockk.every
+import io.mockk.coEvery
 import io.mockk.mockk
-import io.mockk.verify
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class ArticleViewModelTest {
+class ArticleSearchViewModelTest {
 
     private val articleRepository = mockk<ArticleRepository>(relaxed = true)
-    private val savedStateHandle = mockk<androidx.lifecycle.SavedStateHandle>(relaxed = true)
-    private lateinit var viewModel: ArticleViewModel
+    private lateinit var viewModel: ArticleSearchViewModel
 
     @get:Rule
     val coroutineRule = CoroutineMainDispatcherRule(StandardTestDispatcher())
 
     @Before
     fun setUp() {
-        viewModel = ArticleViewModel(savedStateHandle, articleRepository, coroutineRule.dispatcher)
+        viewModel = ArticleSearchViewModel(
+            articleRepository,
+            coroutineRule.dispatcher
+        )
     }
 
     @Test
@@ -52,41 +46,49 @@ class ArticleViewModelTest {
         whenSearchQuery()
 
         val job = launch {
-            viewModel.articlesPaging.collectLatest { pagingData ->
-                differ.submitData(pagingData)
+            viewModel.uiState.collectLatest { uiState ->
+                if(uiState is ArticleSearchViewModel.UiState.Success) {
+                    uiState.articles.collectLatest { pagingData->
+                        differ.submitData(pagingData)
+                    }
+                }
             }
         }
 
         advanceUntilIdle()
 
-        com.google.common.truth.Truth.assertThat(differ.snapshot())
+        assertThat(differ.snapshot())
             .containsExactly(ARTICLE_DTO)
 
         job.cancel()
     }
 
     @Test
-    fun `save query on search`() {
-        whenSearchQuery()
+    fun `on save state`() = runTest(coroutineRule.dispatcher) {
+        whenSavedState(QUERY)
 
-        verify { savedStateHandle[QUERY] = QUERY }
-    }
+        val job = launch {
+            viewModel.uiState.collectLatest { uiState ->
+                if(uiState is ArticleSearchViewModel.UiState.State) {
+                    assertThat(uiState.query).isEqualTo(QUERY)
+                }
+            }
+        }
 
-    @Test
-    fun `save article on click`() {
-        whenArticleClick()
-
-        verify { savedStateHandle[ARTICLE_KEY] = ARTICLE_DTO }
+        job.cancel()
     }
 
     private fun givenArticles() {
-        val pagingData = PagingData.from(
-            listOf(
-                ARTICLE
+        coEvery {
+            articleRepository.getArticles(
+                any(),
+                QUERY,
+                any(),
+                any()
             )
-        )
-        every { articleRepository.getArticles(QUERY) } returns MutableStateFlow(pagingData)
+        } returns listOf(ARTICLE)
     }
+
 
     private fun givenAsyncPagingDataDiffer(): AsyncPagingDataDiffer<ArticleDto> {
         return AsyncPagingDataDiffer(
@@ -101,21 +103,21 @@ class ArticleViewModelTest {
         viewModel.onSearch(QUERY)
     }
 
-    private fun whenArticleClick() {
-        viewModel.onArticleClick(ARTICLE_DTO)
+    private fun whenSavedState(query: String) {
+        viewModel.onSaveState(query)
     }
 
     companion object {
-        private const val ARTICLE_KEY = "article"
         private val ARTICLE = Article(
             "id",
             "title",
-            "thumbnail"
+            listOf("thumbnail")
         )
         private val ARTICLE_DTO = ArticleDto(
             "id",
             "title",
-            "thumbnail"
+            listOf("thumbnail")
+
         )
         private const val QUERY = "query"
 

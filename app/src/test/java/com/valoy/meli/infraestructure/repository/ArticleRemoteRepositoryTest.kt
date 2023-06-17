@@ -1,31 +1,17 @@
 package com.valoy.meli.infraestructure.repository
 
-import androidx.paging.AsyncPagingDataDiffer
-import androidx.paging.PagingData
-import androidx.paging.map
+import com.valoy.meli.domain.model.Article
 import com.valoy.meli.infraestructure.client.ArticleClient
 import com.valoy.meli.infraestructure.dto.Paging
 import com.valoy.meli.infraestructure.dto.Result
 import com.valoy.meli.infraestructure.dto.SearchResponse
-import com.valoy.meli.ui.adapter.ArticleAdapter
-import com.valoy.meli.ui.dto.ArticleDto
-import com.valoy.meli.ui.ArticleViewModelTest
 import com.valoy.meli.utils.CoroutineMainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -45,57 +31,22 @@ class ArticleRemoteRepositoryTest {
     }
 
     @Test
-    fun `return article paging data`() = runTest(coroutineRule.dispatcher) {
+    fun `return articles`() = runTest(coroutineRule.dispatcher) {
         givenGetArticlesResponse()
 
-        val differ = givenAsyncPagingDataDiffer()
+        val articles= whenGetArticlesFromRepo()
 
-        val articlesPaging = whenGetArticlesFromRepo()
-
-        val job = launch {
-            articlesPaging.collectLatest { pagingData ->
-                differ.submitData(pagingData)
-            }
-        }
-
-        advanceUntilIdle()
-
-        com.google.common.truth.Truth.assertThat(differ.snapshot())
-            .containsExactly(ARTICLE_DTO)
-
-        job.cancel()
-
+        assertEquals(listOf(ARTICLE), articles)
     }
 
     @Test
-    fun `return empty article paging data on error`() = runTest(coroutineRule.dispatcher) {
+    fun `return empty articles on error`() = runTest(coroutineRule.dispatcher) {
         givenGetArticlesError()
 
-        val differ = givenAsyncPagingDataDiffer()
+        val articles = whenGetArticlesFromRepo()
 
-        val articlesPaging = whenGetArticlesFromRepo()
+        assertEquals(emptyList<Article>(), articles)
 
-        val job = launch {
-            articlesPaging.collectLatest { pagingData ->
-                differ.submitData(pagingData)
-            }
-        }
-
-        advanceUntilIdle()
-
-        assertEquals(differ.snapshot().toList(), emptyList<ArticleDto>())
-
-        job.cancel()
-
-    }
-
-    private fun givenAsyncPagingDataDiffer(): AsyncPagingDataDiffer<ArticleDto> {
-        return AsyncPagingDataDiffer(
-            diffCallback = ArticleAdapter.ARTICLE_DIFF_CALLBACK,
-            updateCallback = ArticleViewModelTest.noopListUpdateCallback,
-            mainDispatcher = coroutineRule.dispatcher,
-            workerDispatcher = coroutineRule.dispatcher,
-        )
     }
 
     private fun givenGetArticlesError() {
@@ -113,23 +64,18 @@ class ArticleRemoteRepositoryTest {
         )
     }
 
-    private fun whenGetArticlesFromRepo(): Flow<PagingData<ArticleDto>> {
-        val articlesPaging = articleRemoteRepository.getArticles(QUERY)
-            .map { pagingData ->
-                pagingData.map { article ->
-                    ArticleDto.fromArticle(article)
-                }
-            }
-        return articlesPaging
-    }
+    private suspend fun whenGetArticlesFromRepo(): List<Article> =
+        articleRemoteRepository.getArticles("MLA", QUERY, ITEM_PER_PAGE, ITEM_PER_PAGE)
+
+
 
     companion object {
         private const val ITEM_PER_PAGE = 1
         private const val QUERY = "query"
-        private val ARTICLE_DTO = ArticleDto(
+        private val ARTICLE = Article(
             "id",
             "title",
-            "thumbnail"
+            listOf("thumbnail")
         )
         private val RESULT = Result(id = "id", title = "title", thumbnail = "thumbnail")
     }

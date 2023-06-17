@@ -5,5 +5,12 @@ import com.valoy.meli.domain.model.Article
 import kotlinx.coroutines.flow.Flow
 
 interface ArticleRepository {
-    fun getArticles(query: String): Flow<PagingData<Article>>
+    suspend fun getArticles(
+        siteId: String,
+        query: String,
+        offset: Int,
+        limit: Int
+    ): List<Article>
+
+    suspend fun getArticleDetail(articleId: String): Article
 }
