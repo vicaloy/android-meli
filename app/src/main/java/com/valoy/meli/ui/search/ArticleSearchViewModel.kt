@@ -7,7 +7,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
-import com.valoy.meli.domain.repository.ArticleRepository
+import com.valoy.meli.domain.action.GetArticles
 import com.valoy.meli.infraestructure.paging.ArticlePagingSource
 import com.valoy.meli.ui.dto.ArticleDto
 import kotlinx.coroutines.CancellationException
@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class ArticleSearchViewModel(
-    private val repository: ArticleRepository,
+    private val getArticles: GetArticles,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
@@ -52,7 +52,7 @@ class ArticleSearchViewModel(
         return Pager(
             PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false)
         ) {
-            ArticlePagingSource(query, repository)
+            ArticlePagingSource(query, getArticles)
         }.flow
             .map { pagingData ->
                 pagingData.map { article ->

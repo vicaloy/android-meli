@@ -4,11 +4,12 @@ import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.savedstate.SavedStateRegistryOwner
+import com.valoy.meli.domain.action.GetArticles
 import com.valoy.meli.domain.repository.ArticleRepository
 
 class ArticleSearchViewModelFactory(
     owner: SavedStateRegistryOwner,
-    private val repository: ArticleRepository
+    private val getArticles: GetArticles
 ) : AbstractSavedStateViewModelFactory(owner, null) {
 
     override fun <T : ViewModel> create(
@@ -18,7 +19,7 @@ class ArticleSearchViewModelFactory(
     ): T {
         if (modelClass.isAssignableFrom(ArticleSearchViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ArticleSearchViewModel(repository) as T
+            return ArticleSearchViewModel(getArticles) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -12,7 +12,7 @@ class ArticleRemoteRepository(private val articleClient: ArticleClient) : Articl
     override suspend fun getArticles(siteId: String, query: String, offset: Int, limit: Int) =
         articleClient.getArticles(siteId, query, offset, limit).mapToArticles()
 
-    override suspend fun getArticleDetail(articleId: String): Article =
+    override suspend fun findArticle(articleId: String): Article =
         articleClient.getArticleDetail(articleId).mapToArticle()
 
 

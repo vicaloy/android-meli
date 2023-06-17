@@ -1,5 +1,6 @@
 package com.valoy.meli.ui.detail
 
+import com.valoy.meli.domain.action.FindArticle
 import com.valoy.meli.domain.model.Article
 import com.valoy.meli.domain.repository.ArticleRepository
 import com.valoy.meli.ui.dto.ArticleDto
@@ -20,7 +21,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ArticleDetailViewModelTest {
 
-    private val articleRepository = mockk<ArticleRepository>(relaxed = true)
+    private val findArticle = mockk<FindArticle>(relaxed = true)
     private lateinit var viewModel: ArticleDetailViewModel
 
     @get:Rule
@@ -29,7 +30,7 @@ class ArticleDetailViewModelTest {
     @Before
     fun setUp() {
         viewModel = ArticleDetailViewModel(
-            articleRepository,
+            findArticle,
             coroutineRule.dispatcher
         )
     }
@@ -57,13 +58,8 @@ class ArticleDetailViewModelTest {
 
     private fun givenArticles() {
         coEvery {
-            articleRepository.getArticles(
-                any(),
-                ARTICLE_ID,
-                any(),
-                any()
-            )
-        } returns listOf(ARTICLE)
+           findArticle(ARTICLE_ID)
+        } returns ARTICLE
     }
 
 

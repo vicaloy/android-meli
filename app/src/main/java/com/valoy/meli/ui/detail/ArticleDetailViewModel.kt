@@ -2,7 +2,7 @@ package com.valoy.meli.ui.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.valoy.meli.domain.repository.ArticleRepository
+import com.valoy.meli.domain.action.FindArticle
 import com.valoy.meli.ui.dto.ArticleDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ArticleDetailViewModel(
-    private val repository: ArticleRepository,
+    private val findArticle: FindArticle,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
@@ -24,7 +24,7 @@ class ArticleDetailViewModel(
         _uiState.value = UiState.Loading
         viewModelScope.launch(dispatcher) {
             try {
-                val article = ArticleDto.fromArticle(repository.getArticleDetail(articleId))
+                val article = ArticleDto.fromArticle(findArticle(articleId))
                 _uiState.value = UiState.Success(article)
             }catch (exception: CancellationException){
                 throw exception

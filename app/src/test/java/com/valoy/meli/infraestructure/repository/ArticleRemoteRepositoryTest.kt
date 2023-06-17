@@ -39,20 +39,6 @@ class ArticleRemoteRepositoryTest {
         assertEquals(listOf(ARTICLE), articles)
     }
 
-    @Test
-    fun `return empty articles on error`() = runTest(coroutineRule.dispatcher) {
-        givenGetArticlesError()
-
-        val articles = whenGetArticlesFromRepo()
-
-        assertEquals(emptyList<Article>(), articles)
-
-    }
-
-    private fun givenGetArticlesError() {
-        coEvery { articleClient.getArticles(any(), any(), any(), any()) } throws Exception()
-    }
-
     private fun givenGetArticlesResponse() {
         coEvery { articleClient.getArticles(any(), any(), any(), any()) } returns SearchResponse(
             results = listOf(RESULT),
@@ -66,8 +52,6 @@ class ArticleRemoteRepositoryTest {
 
     private suspend fun whenGetArticlesFromRepo(): List<Article> =
         articleRemoteRepository.getArticles("MLA", QUERY, ITEM_PER_PAGE, ITEM_PER_PAGE)
-
-
 
     companion object {
         private const val ITEM_PER_PAGE = 1

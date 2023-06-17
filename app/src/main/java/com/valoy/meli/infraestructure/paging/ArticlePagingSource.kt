@@ -2,17 +2,16 @@ package com.valoy.meli.infraestructure.paging
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import com.valoy.meli.domain.action.GetArticles
 import com.valoy.meli.domain.model.Article
-import com.valoy.meli.domain.repository.ArticleRepository
 
-class ArticlePagingSource(private val query: String, private val articleRepository: ArticleRepository) :
+class ArticlePagingSource(private val query: String, private val getArticles: GetArticles) :
     PagingSource<Int, Article>() {
 
     override suspend fun load(params: LoadParams<Int>) = try {
         val offset = params.key ?: STARTING_PAGE_INDEX
         val limit = params.loadSize
-        val articles = articleRepository
-            .getArticles("MLA", query, offset, limit)
+        val articles = getArticles("MLA", query, offset, limit)
 
         LoadResult.Page(
             data = articles,

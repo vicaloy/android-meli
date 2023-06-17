@@ -3,6 +3,7 @@ package com.valoy.meli.infraestructure.paging
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import com.valoy.meli.domain.action.GetArticles
 import com.valoy.meli.domain.model.Article
 import com.valoy.meli.domain.repository.ArticleRepository
 import com.valoy.meli.utils.CoroutineMainDispatcherRule
@@ -19,7 +20,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ArticlePagingSourceTest {
 
-    private val articleRepository = mockk<ArticleRepository>()
+    private val getArticles = mockk<GetArticles>()
     private lateinit var pagingSource: ArticlePagingSource
 
     @get:Rule
@@ -28,7 +29,7 @@ class ArticlePagingSourceTest {
 
     @Before
     fun setUp() {
-        pagingSource = ArticlePagingSource(QUERY, articleRepository)
+        pagingSource = ArticlePagingSource(QUERY, getArticles)
     }
 
     @Test
@@ -36,7 +37,7 @@ class ArticlePagingSourceTest {
         val offset = 0
         val limit = 1
         val error = RuntimeException("404", Throwable())
-        coEvery { articleRepository.getArticles(any(), any(), any(), any()) } throws error
+        coEvery { getArticles(any(), any(), any(), any()) } throws error
         val expectedResult = PagingSource.LoadResult.Error<Int, Article>(error)
         assertEquals(
             expectedResult, pagingSource.load(
@@ -155,11 +156,11 @@ class ArticlePagingSourceTest {
     }
 
     private fun givenGetArticleRepo() {
-        coEvery { articleRepository.getArticles(any(), any(), any(), any()) } returns listOf(ARTICLE)
+        coEvery { getArticles(any(), any(), any(), any()) } returns listOf(ARTICLE)
     }
 
     private fun givenGetArticlesRepo(){
-        coEvery { articleRepository.getArticles(any(), any(), any(), any()) } returns listOf(ARTICLE, ARTICLE, ARTICLE)
+        coEvery { getArticles(any(), any(), any(), any()) } returns listOf(ARTICLE, ARTICLE, ARTICLE)
     }
 
     private suspend fun whenPagingLoadRefresh(key: Int, loadSize: Int) = pagingSource.load(

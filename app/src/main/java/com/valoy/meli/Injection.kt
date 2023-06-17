@@ -2,6 +2,8 @@ package com.valoy.meli
 
 import androidx.lifecycle.ViewModelProvider
 import androidx.savedstate.SavedStateRegistryOwner
+import com.valoy.meli.domain.action.FindArticle
+import com.valoy.meli.domain.action.GetArticles
 import com.valoy.meli.infraestructure.client.ArticleClient
 import com.valoy.meli.infraestructure.repository.ArticleRemoteRepository
 import com.valoy.meli.domain.repository.ArticleRepository
@@ -14,16 +16,18 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 
 object Injection {
 
+    private fun provideFindArticle() = FindArticle(provideArticleRepository())
+    private fun provideGetArticles() = GetArticles(provideArticleRepository())
     private fun provideArticleRepository(): ArticleRepository = ArticleRemoteRepository(
         provideProductClient(providerOkHttpClient())
     )
 
     fun provideArticleSearchViewModelFactory(owner: SavedStateRegistryOwner): ViewModelProvider.Factory {
-        return ArticleSearchViewModelFactory(owner,  provideArticleRepository())
+        return ArticleSearchViewModelFactory(owner,  provideGetArticles())
     }
 
     fun provideArticleDetailViewModelFactory(owner: SavedStateRegistryOwner): ViewModelProvider.Factory {
-        return ArticleDetailViewModelFactory(owner,  provideArticleRepository())
+        return ArticleDetailViewModelFactory(owner,  provideFindArticle())
     }
 
     private fun providerOkHttpClient(): OkHttpClient {

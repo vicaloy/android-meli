@@ -3,8 +3,8 @@ package com.valoy.meli.ui.search
 import androidx.paging.AsyncPagingDataDiffer
 import androidx.recyclerview.widget.ListUpdateCallback
 import com.google.common.truth.Truth.assertThat
+import com.valoy.meli.domain.action.GetArticles
 import com.valoy.meli.domain.model.Article
-import com.valoy.meli.domain.repository.ArticleRepository
 import com.valoy.meli.ui.adapter.ArticleAdapter.Companion.ARTICLE_DIFF_CALLBACK
 import com.valoy.meli.ui.dto.ArticleDto
 import com.valoy.meli.utils.CoroutineMainDispatcherRule
@@ -23,7 +23,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ArticleSearchViewModelTest {
 
-    private val articleRepository = mockk<ArticleRepository>(relaxed = true)
+    private val getArticles = mockk<GetArticles>()
     private lateinit var viewModel: ArticleSearchViewModel
 
     @get:Rule
@@ -32,7 +32,7 @@ class ArticleSearchViewModelTest {
     @Before
     fun setUp() {
         viewModel = ArticleSearchViewModel(
-            articleRepository,
+            getArticles,
             coroutineRule.dispatcher
         )
     }
@@ -80,7 +80,7 @@ class ArticleSearchViewModelTest {
 
     private fun givenArticles() {
         coEvery {
-            articleRepository.getArticles(
+            getArticles(
                 any(),
                 QUERY,
                 any(),
