@@ -2,6 +2,8 @@
 
 This repository contains an Android application built with the MVVM architecture, utilizing Kotlin Flows for reactive programming, and Paging 3 for efficient data handling and pagination. The project also includes comprehensive unit tests and uses XML for the user interface.
 
+- 🔗 URL found at: https://developers.mercadolibre.com.ar/es_ar/items-y-busquedas
+
 ## 🚀 Key Features
 
 - MVVM Architecture:
